@@ -5,6 +5,9 @@ pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files (x86)\Tesseract-OCR\t
 import re
 import os
 from preprocess import *
+import random
+import time
+from detect_object_m1 import get_object_bbox_m1
 
 first_chars = ['A',"B","D","G","H","J","K","L","M","O","P","R","S","T","U","W"]
 sec_chars = ['A','B','D','H','J','K','N','P','R','S','T','Y']
@@ -223,7 +226,7 @@ def ocr_1(image):
     
     #image = cv2.imread(img_path)
     #gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    resized = cv2.resize(image, (300, 50), interpolation=cv2.INTER_CUBIC)
+    resized = cv2.resize(image, (333, 75), interpolation=cv2.INTER_CUBIC)
     gray_bin = cv2.GaussianBlur(resized, (5, 5), 0)
     txt = pytesseract.image_to_string(gray_bin,lang='eng', config='--oem 3 --psm 6')
     if((len(txt) > 0)and (txt[0].isdigit())):
@@ -276,6 +279,22 @@ def uniq(input):
   return output
     
 
+def extract_plates_from_bbox(image,bbox):
+    check = 0
+    img = image[int(bbox[1]):int(bbox[3]),int(bbox[0]):int(bbox[2])]
+        
+    if img.any():
+        img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+        texts = get_text(img)
+        if len(texts) > 0:
+            check  = 1
+            idx = random.randint(0,len(texts)- 1)
+            return texts[idx],check
+        else:
+            return texts,check
+    else:
+        return "",0
+
 def get_text(image):
     texts = []
     for ocr in [ocr_1, ocr_2, ocr_3]:
@@ -304,32 +323,39 @@ def get_text(image):
         
         return texts
 
-def extract_plates(image,bboxs):
-    plates = []
-    for i in range(len(bboxs)):
-        img = image[int(bboxs[i][1]):int(bboxs[i][3]),int(bboxs[i][0]):int(bboxs[i][2])]
-        img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-        texts = get_text(img)
-        for txt in texts:
-            if txt not in plates:
-                plates.append(txt)
-    return plates   
-
-def read_video(vid_path):
-    frames = 0
-    vid = cv2.VideoCapture(vid_path)
-    start = time.time()
-    plates = []
-    end = 0
+def read_video(video_path):
+    pred_frames = []
+    fontScale = 1
+    font = cv2.FONT_HERSHEY_SIMPLEX 
+    thickness = 2
+    color = (0, 255, 0) 
+    vid = cv2.VideoCapture(video_path)
     while vid.isOpened():
         ret, frame = vid.read()
-
         if ret:
             bboxs = get_object_bbox_m1(frame)
-            texts = extract_plates(frame,bboxs)
-            for txt in texts:
-                if txt not in plates:
-                    plates.append(txt)
+            for bbox in bboxs:
+                text,check = extract_plates_from_bbox(frame.copy(),bbox)
+                if check == 0:
+                    cv2.rectangle(frame, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255,255,255), 2)
+                    frame = cv2.resize(frame,(640,480))
+                    pred_frames.append(frame)
+                else:
+                    cv2.rectangle(frame, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255,255,255), 2)
+                    cv2.putText(frame,text,(int(bbox[0]), int(bbox[1])),font,fontScale,color,thickness)
+                    frame = cv2.resize(frame,(640,480))
+                    pred_frames.append(frame)
         else:
+            return pred_frames
+    
+    
 
-            return plates
+def create_video(pred_frames,video_name):
+    out = cv2.VideoWriter(video_name,cv2.VideoWriter_fourcc(*'DIVX'),30,(640,480))
+    for i in range(len(pred_frames)):
+        # writing to a image array
+        out.write(pred_frames[i])
+    out.release()
+
+# frames = read_video('new_video')
+# create_video(frames,'test_vid.mp4')
