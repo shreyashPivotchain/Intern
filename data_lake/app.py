@@ -65,6 +65,7 @@ def query_Annotations():
             
             #print(ann[0])
         # Annots=list(key_collection.find())
+        #print(combined_annots)
         print('converting to CSV')
         for i in a:
             #print(a[i])
@@ -72,7 +73,8 @@ def query_Annotations():
             for j in tqdm(range(i)):
                 time.sleep(0.1)
 
-        csv=convert_Pascal_VOC_format(combined_annots,temp_location,required_labels)
+        # csv=convert_Pascal_VOC_format(combined_annots,temp_location,required_labels)
+        csv=convert2yolo(combined_annots,temp_location,required_labels)
         
         get_imagesandCSV(temp_location)
         
@@ -134,11 +136,41 @@ def updated_clients():
     ab=pd.DataFrame(d)
     l=ab.iloc[0]['folder_list']
     clients=[]
+    label_count=[]
+    
+
     for i in l:
         a=i.split('/')
         clients.append(a[1].split('_')[0])
-    print(clients)
-    return jsonify({'clients': clients})
+    #print(clients)
+    for j in clients:
+    	print(j)
+    	d1=key_collection.find({'location_map':{'$regex':j}})
+
+    	l=list(map(lambda x:list(x.keys()),d1.distinct('data.class')))
+
+    	unique_labs=set(chain.from_iterable(l))
+    	label_count.append(len(unique_labs))
+    client_label_map=dict(zip(clients,label_count))
+    client_label_list=[]
+    for i in client_label_map.items():
+
+    	client_label_list.append(i)
+    print(client_label_list)
+    #l=[{"name":[i for i in client_label_map.keys()],"label_count":label_count}]
+    #print(l)
+
+
+    #print(client_label_map.values())
+    #print(client_label_map)
+
+    	
+    return jsonify({"client_labels":client_label_list})
+
+    
+
+
+
 
 
 #%%
