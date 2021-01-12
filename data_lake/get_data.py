@@ -36,12 +36,15 @@ def convert_Pascal_VOC_format(annotations,temp_location,required_labels):
     l=[]
     
     required_labels=set(list(chain.from_iterable(required_labels.values())))
+    #a=list(required_labels)
+    #print(a[0])
 
     copy_command=[]
     for annot in annotations:
         #print(annot)
         try:
             newname=annot['filename']
+            print(newname)
 
             ##########*************REPLACE WITH cp or rsync command**************############
             #source=annot['location_map']
@@ -59,11 +62,13 @@ def convert_Pascal_VOC_format(annotations,temp_location,required_labels):
             for lab in required_labels:
                 try:
                     cords=annot['data']['class'][lab]
+                    print(len(cords))
                     for i in range(len(cords)):
                         
                         f_name=annot['filename']
                         w=annot['data']['width']
                         h=annot['data']['height']
+                        print(w,h)
                         clas=lab
                        # c=annot['data']['client']
                         xmin,ymin,xmax,ymax=annot['data']['class'][lab][i].values()
@@ -81,8 +86,120 @@ def convert_Pascal_VOC_format(annotations,temp_location,required_labels):
                 
 
     df=pd.DataFrame(l,columns=['filename','width','height','class','xmin','ymin','xmax','ymax'])
-    df.to_csv(osp.join(temp_location,'csv_file'),index=False)
+    df.to_csv(osp.join(temp_location,'csv_file.csv'),index=False)
     return df
+
+
+def convert2yolo(annotations,temp_location,required_labels):
+      
+
+    required_labels=set(list(chain.from_iterable(required_labels.values())))
+    
+    labelmap={}
+    for i,lab in enumerate(required_labels):
+        #print(lab)
+        labelmap[lab]=i
+    #print(labelmap)
+
+    for annot in annotations:
+        
+        try:
+            newname=annot['filename']
+            #print(newname)
+            shutil.copy2(annot['location_map'],osp.join(temp_location,newname))
+
+            
+
+            l=[]
+            for lab in required_labels:
+                #print(lab)
+                
+                try:
+                    cords=annot['data']['class'][lab]
+                    #print(cords)
+                    for i in range(len(cords)):
+                        #print(annot)
+                        
+
+
+                           # for idx,d in annot[annot['filename']==fname].iterrows():
+                                #print(idx)
+                            #class_id=n
+                        
+                        w=annot['data']['width']
+                        h=annot['data']['height']
+                        #print('!!!!!!!!!!!!!!!',annot['data']['class'][lab][0]['xmin'])
+
+                        wb=annot['data']['class'][lab][0]['xmax']-annot['data']['class'][lab][0]['xmin']
+                        hb=annot['data']['class'][lab][0]['ymax']-annot['data']['class'][lab][0]['ymin']
+                        
+                        xc=annot['data']['class'][lab][0]['xmin']+wb/2
+                        yc=annot['data']['class'][lab][0]['ymin']+hb/2
+
+
+                        #print(w,h)
+                        l.append([labelmap[lab],round(xc/w,6), round(yc/h,6),round(wb/annot['data']['width'],6),round(hb/annot['data']['height'],6)])
+                    df=pd.DataFrame(l)
+                        # df.to_csv(newname[:-3]+'txt',index=False,sep=' ',header=False)
+                    df.to_csv(osp.join(temp_location,'{}.txt'.format(newname[:-3])),header=None,index=False)
+
+                        #print(l)
+         
+
+                except Exception as e:
+                    #traceback.print_exc()
+                    pass
+
+
+        except Exception as e:
+            traceback.print_exc()
+        #print(e)
+            #traceback.print_exc()s
+         
+        # shutil.copy(annot['location_map'],osp.join(temp_location,newname))
+    #df=pd.DataFrame(l)
+    #print(df)
+    #df.to_csv('/'+newname[:-3]+'txt',index=False,sep=' ',header=False)
+
+
+                        
+                    
+    
+    
+
+                
+                
+
+
+        
+
+                          
+
+
+
+                  
+
+
+
+
+
+    """for fname in data['filename'].unique():
+        l=[]
+        for idx,d in data[data['filename']==fname].iterrows():
+            w=d['xmax']-d['xmin']
+            h=d['ymax']-d['ymin']
+            xc=d['xmin']+w/2
+            yc=d['ymin']+h/2
+
+
+            l.append([cls_id, round(xc/d['width'],6), round(yc/d['height'],6),round(w/d['width'],6),round(h/d['height'],6)])
+        df=pd.DataFrame(l)
+        shutil.copy('/data_lake/kotak_data_23dec/'+fname,'yolo/')
+        df.to_csv('yolo/'+fname[:-3]+'txt',index=False,sep=' ',header=False)
+
+if __name__==__main:
+    data=pd.read_csv('file.csv')
+    # all_imgs=data[data['class'].isin(['Explosion','Arson'])]"""
 
 
 #%%
