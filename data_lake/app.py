@@ -28,6 +28,11 @@ temp_location='/home/temp_location'
 def ping(): 
     return jsonify({'ping': 'pong'})
 
+#@app.route('/download_format',methods=['POST'])
+#def download_format():
+#	req_format=json.loads(request.data)['form']
+#	if req_format=='pascalvoc':
+
 
 @app.route('/query_Annotations',methods=['POST'])
 def query_Annotations():
@@ -75,6 +80,66 @@ def query_Annotations():
 
         # csv=convert_Pascal_VOC_format(combined_annots,temp_location,required_labels)
         csv=convert2yolo(combined_annots,temp_location,required_labels)
+        
+        get_imagesandCSV(temp_location)
+        
+        remove_temp_location(temp_location)
+
+                
+        return jsonify({'status': 1})
+        
+    except Exception as e:
+        print(e)
+        jsonify({'status': 0})
+
+@app.route('/query_Annotations',methods=['POST'])
+def query_Annotations():
+    print(type(request.data))
+    required_labels=json.loads(request.data)
+    #annotation_type=json.loads(request.data)[1]
+    #print(annotation_type['form'])
+
+    #print(required_labels)
+    try:
+        create_temp_location(temp_location)
+        #Annots=list(map(lambda x: list(key_collection.find({
+        #                            f"data.class.{x}":{'$exists':1}
+         #                       })
+          #                      ),required_labels))
+        #df=pd.DataFrame(Annots)
+        combined_annots=[]
+        a=[]
+        for client in required_labels.keys():
+            #print(client)
+            Annots=list(map(lambda x: list(key_collection.find({'$and':[
+                                        {f"data.class.{x}":{'$exists':1}},{'location_map':{'$regex':client}
+                                    }]})
+                                    ),required_labels[client]))
+            ann=list(itertools.chain.from_iterable(Annots))
+            #print(ann)
+            # Remove dulpicates
+            #for i in tqdm(range(int(9e6))): 
+                #pass
+            ann=[i for n, i in enumerate(ann) if i not in ann[n + 1:]]
+            combined_annots.extend(ann)
+            print(len(ann))
+            a.append(len(ann))
+
+            #for i in tqdm(range(0,100)):
+            #time.sleep(0.1)
+            
+            #print(ann[0])
+        # Annots=list(key_collection.find())
+        #print(combined_annots)
+        print('converting to CSV')
+        for i in a:
+            #print(a[i])
+            
+            for j in tqdm(range(i)):
+                time.sleep(0.1)
+
+        csv=convert_Pascal_VOC_format(combined_annots,temp_location,required_labels)
+        #csv=convert2yolo(combined_annots,temp_location,required_labels)
         
         get_imagesandCSV(temp_location)
         
@@ -154,21 +219,26 @@ def updated_clients():
     client_label_map=dict(zip(clients,label_count))
     client_label_list=[]
     for i in client_label_map.items():
-
     	client_label_list.append(i)
     print(client_label_list)
-    #l=[{"name":[i for i in client_label_map.keys()],"label_count":label_count}]
-    #print(l)
+    new=[]
+    for i in range(0,len(client_label_list)):
+    	new.append({"Name":client_label_list[i][0],"label_count":client_label_list[i][1]})
+    print(new)
+    	
+    	#clijsonify({"client_labels":[{"Name":i[0],"label_count":i[1]}]})
+    
 
 
     #print(client_label_map.values())
     #print(client_label_map)
-
-    	
-    return jsonify({"client_labels":client_label_list})
-
+    
+    	#new.append(json({"client_labels":[{"Name":i[0],"label_count":i[1]}]}))
     
 
+    return jsonify({"client_labels":new})
+
+    
 
 
 

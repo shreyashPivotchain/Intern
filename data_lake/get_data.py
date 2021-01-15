@@ -44,7 +44,7 @@ def convert_Pascal_VOC_format(annotations,temp_location,required_labels):
         #print(annot)
         try:
             newname=annot['filename']
-            print(newname)
+            #print(newname)
 
             ##########*************REPLACE WITH cp or rsync command**************############
             #source=annot['location_map']
@@ -141,7 +141,7 @@ def convert2yolo(annotations,temp_location,required_labels):
                         l.append([labelmap[lab],round(xc/w,6), round(yc/h,6),round(wb/annot['data']['width'],6),round(hb/annot['data']['height'],6)])
                     df=pd.DataFrame(l)
                         # df.to_csv(newname[:-3]+'txt',index=False,sep=' ',header=False)
-                    df.to_csv(osp.join(temp_location,'{}.txt'.format(newname[:-3])),header=None,index=False)
+                    df.to_csv(osp.join(temp_location,'{}.txt'.format(newname[:-4])),header=None,index=False)
 
                         #print(l)
          
